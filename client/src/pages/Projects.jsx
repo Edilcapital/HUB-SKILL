@@ -14,7 +14,11 @@ export default function Projects() {
   const [parentPath, setParentPath] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const [projectSkills, setProjectSkills] = useState({});
+  const [localServerConnected, setLocalServerConnected] = useState(true);
+  const [detectingLocalServer, setDetectingLocalServer] = useState(false);
   const { t } = useLanguage();
+
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
   const fetchProjects = async () => {
     try {
@@ -38,8 +42,47 @@ export default function Projects() {
   };
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (isLocal) {
+      fetchProjects();
+      return;
+    }
+
+    // Siamo in cloud su Railway: verifichiamo se il server locale su localhost:3001 risponde
+    setDetectingLocalServer(true);
+    setLoading(true);
+
+    const checkLocalServer = async () => {
+      try {
+        const res = await fetch('http://localhost:3001/api/projects');
+        if (res.ok) {
+          // Il server locale è attivo! Redirigiamo l'utente sul localhost
+          window.location.href = 'http://localhost:3001/projects';
+          return true;
+        }
+      } catch (e) {
+        // Server locale non attivo
+      }
+      return false;
+    };
+
+    checkLocalServer().then(connected => {
+      if (!connected) {
+        setLocalServerConnected(false);
+        setLoading(false);
+        setDetectingLocalServer(false);
+
+        // Avviamo un polling ogni 2 secondi per rilevare quando l'utente attiva il server locale
+        const interval = setInterval(async () => {
+          const connectedNow = await checkLocalServer();
+          if (connectedNow) {
+            clearInterval(interval);
+          }
+        }, 2000);
+
+        return () => clearInterval(interval);
+      }
+    });
+  }, [isLocal]);
 
   const handleBrowse = async (target) => {
     setBrowsing(true);
@@ -118,6 +161,37 @@ export default function Projects() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isLocal && !localServerConnected) {
+    return (
+      <div className="p-8 max-w-2xl mx-auto flex flex-col items-center justify-center h-[80vh]">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 text-center flex flex-col items-center shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400" />
+          <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-6 border border-purple-500/20">
+            <FolderOpen className="w-8 h-8 text-purple-400" />
+          </div>
+          <h1 className="text-xl font-bold mb-3 text-white">{t('proj_cloud_offline_title')}</h1>
+          <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+            {t('proj_cloud_offline_desc')}
+          </p>
+
+          <div className="w-full text-left bg-black/30 border border-white/5 rounded-xl p-5 mb-6 text-sm">
+            <h3 className="font-semibold text-purple-300 mb-3">{t('proj_cloud_offline_instructions')}</h3>
+            <ul className="space-y-2.5 text-gray-400 font-medium">
+              <li>{t('proj_cloud_offline_step1')}</li>
+              <li>{t('proj_cloud_offline_step2')}</li>
+              <li>{t('proj_cloud_offline_step3')}</li>
+            </ul>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-gray-500 font-semibold mt-2">
+            <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            <span>{t('proj_cloud_offline_waiting')}</span>
+          </div>
+        </div>
       </div>
     );
   }

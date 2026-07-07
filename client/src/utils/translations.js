@@ -137,7 +137,14 @@ export const translations = {
     inst_cloud_desc: "You are connected via cloud. I cannot write files directly to your Mac's filesystem.",
     inst_cloud_btn_download: "Download SKILL.md",
     inst_cloud_curl_title: "Or run this command in your project's terminal:",
-    inst_cloud_copied: "Command copied to clipboard!"
+    inst_cloud_copied: "Command copied to clipboard!",
+    proj_cloud_offline_title: "Connection to your Mac Required",
+    proj_cloud_offline_desc: "To manage your local projects and use the Finder, the application must be running locally on your Mac.",
+    proj_cloud_offline_instructions: "Instructions to connect:",
+    proj_cloud_offline_step1: "1. Go to your Mac Desktop.",
+    proj_cloud_offline_step2: "2. Double click the file Avvia-AI-Skill-Hub.command.",
+    proj_cloud_offline_step3: "3. This page will automatically detect the launch and connect you.",
+    proj_cloud_offline_waiting: "Waiting for local server on your Mac..."
   },
   it: {
     // Sidebar
@@ -277,6 +284,13 @@ export const translations = {
     inst_cloud_desc: "Sei connesso via cloud. Non posso scrivere file direttamente sul file system del tuo Mac.",
     inst_cloud_btn_download: "Scarica file SKILL.md",
     inst_cloud_curl_title: "Oppure esegui questo comando nel terminale del tuo progetto:",
-    inst_cloud_copied: "Comando copiato negli appunti!"
+    inst_cloud_copied: "Comando copiato negli appunti!",
+    proj_cloud_offline_title: "Connessione al tuo Mac Richiesta",
+    proj_cloud_offline_desc: "Per gestire i tuoi progetti locali ed utilizzare il Finder, l'applicazione deve essere eseguita in locale sul tuo Mac.",
+    proj_cloud_offline_instructions: "Istruzioni per connetterti:",
+    proj_cloud_offline_step1: "1. Vai sul Desktop del tuo Mac.",
+    proj_cloud_offline_step2: "2. Fai doppio click sul file Avvia-AI-Skill-Hub.command.",
+    proj_cloud_offline_step3: "3. Questa pagina rileverà l'avvio in automatico e ti connetterà all'istante.",
+    proj_cloud_offline_waiting: "In attesa del server locale sul tuo Mac..."
   }
 };
