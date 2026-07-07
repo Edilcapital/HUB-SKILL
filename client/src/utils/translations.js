@@ -132,7 +132,12 @@ export const translations = {
     inst_missing: "Missing",
     inst_toast_select_project: "Please select a project first",
     inst_toast_success: "\"{{skill}}\" installed to {{project}}!",
-    inst_toast_failed: "Installation failed: {{error}}"
+    inst_toast_failed: "Installation failed: {{error}}",
+    inst_cloud_title: "Manual Download (Cloud Mode)",
+    inst_cloud_desc: "You are connected via cloud. I cannot write files directly to your Mac's filesystem.",
+    inst_cloud_btn_download: "Download SKILL.md",
+    inst_cloud_curl_title: "Or run this command in your project's terminal:",
+    inst_cloud_copied: "Command copied to clipboard!"
   },
   it: {
     // Sidebar
@@ -267,6 +272,11 @@ export const translations = {
     inst_missing: "Mancante",
     inst_toast_select_project: "Seleziona prima un progetto",
     inst_toast_success: "\"{{skill}}\" installata in {{project}}!",
-    inst_toast_failed: "Installazione fallita: {{error}}"
+    inst_toast_failed: "Installazione fallita: {{error}}",
+    inst_cloud_title: "Download Manuale (Cloud)",
+    inst_cloud_desc: "Sei connesso via cloud. Non posso scrivere file direttamente sul file system del tuo Mac.",
+    inst_cloud_btn_download: "Scarica file SKILL.md",
+    inst_cloud_curl_title: "Oppure esegui questo comando nel terminale del tuo progetto:",
+    inst_cloud_copied: "Comando copiato negli appunti!"
   }
 };

@@ -132,6 +132,41 @@ app.get('/api/skills/:name/content', async (req, res) => {
   }
 });
 
+// Get raw SKILL.md file directly (useful for curl/download)
+app.get('/api/skills/:name/raw', async (req, res) => {
+  const { lang = 'en' } = req.query;
+  const skill = db.prepare('SELECT * FROM skills WHERE name = ?').get(req.params.name);
+  if (!skill) {
+    return res.status(404).send('Skill not found');
+  }
+
+  // Se è richiesta la lingua italiana ed è già presente nel DB
+  if (lang === 'it' && skill.content_it && skill.content_it.trim() !== '') {
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    return res.send(skill.content_it);
+  }
+
+  try {
+    const response = await fetch(skill.skill_md_url);
+    if (!response.ok) throw new Error();
+    let content = await response.text();
+
+    if (lang === 'it') {
+      try {
+        content = await translateMarkdown(content, 'it');
+        db.prepare('UPDATE skills SET content_it = ? WHERE name = ?').run(content, skill.name);
+      } catch (err) {
+        console.error('Translation failed:', err);
+      }
+    }
+
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.send(content);
+  } catch (error) {
+    res.status(500).send('Failed to retrieve skill content');
+  }
+});
+
 // Asynchronous background crawler to fetch feedback & alternative projects
 async function fetchWebFeedback(name, description) {
   const results = {
