@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, ExternalLink, Tag, Shield, Calendar } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, Tag, Shield, Calendar, Bookmark } from 'lucide-react';
 import { api } from '../utils/api';
 import { useLanguage } from '../utils/LanguageContext';
 import InstallModal from '../components/InstallModal';
@@ -68,6 +68,43 @@ export default function SkillDetail() {
     fetchContent();
   }, [name, viewLang]);
 
+  const handleWatchToggle = async () => {
+    if (!skill) return;
+    try {
+      if (skill.is_watched) {
+        await api.unwatchSkill(skill.name);
+        setSkill(prev => ({ ...prev, is_watched: 0 }));
+      } else {
+        await api.watchSkill(skill.name);
+        setSkill(prev => ({ ...prev, is_watched: 1 }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Polling per caricare le info della watchlist una volta salvata
+  useEffect(() => {
+    if (!skill || !skill.is_watched || skill.watchlist_info) return;
+
+    let count = 0;
+    const interval = setInterval(async () => {
+      count++;
+      try {
+        const skillData = await api.getSkill(skill.name, language);
+        if (skillData.watchlist_info) {
+          setSkill(skillData);
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      if (count >= 6) clearInterval(interval);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [skill?.is_watched, skill?.watchlist_info, skill?.name, language]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -91,7 +128,7 @@ export default function SkillDetail() {
   const frontmatter = {};
   if (content && content.startsWith('---')) {
     const endIdx = content.indexOf('---', 3);
-    if (endIdx > 0) {
+    if (endIdx !== -1) {
       const fm = content.substring(3, endIdx);
       fm.split('\n').forEach(line => {
         const [key, ...vals] = line.split(':');
@@ -139,10 +176,24 @@ export default function SkillDetail() {
               )}
             </div>
           </div>
-          <button onClick={() => setShowInstall(true)} className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg shadow-purple-500/25 flex items-center gap-2 shrink-0 self-start">
-            <Download className="w-4 h-4" />
-            {t('cat_btn_install')}
-          </button>
+          <div className="flex items-center gap-3 shrink-0 self-start">
+            <button
+              onClick={handleWatchToggle}
+              className={`px-4 py-2.5 font-semibold rounded-xl border transition-all duration-200 flex items-center gap-2 focus:outline-none ${
+                skill.is_watched
+                  ? 'bg-purple-500/20 border-purple-500/30 text-purple-300 hover:bg-purple-500/30'
+                  : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20'
+              }`}
+            >
+              <Bookmark className={`w-4 h-4 ${skill.is_watched ? 'fill-purple-500' : ''}`} />
+              {skill.is_watched ? t('det_unwatch') : t('det_watch')}
+            </button>
+
+            <button onClick={() => setShowInstall(true)} className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg shadow-purple-500/25 flex items-center gap-2">
+              <Download className="w-4 h-4" />
+              {t('cat_btn_install')}
+            </button>
+          </div>
         </div>
 
         {/* Tags */}
@@ -221,6 +272,95 @@ export default function SkillDetail() {
           <p className="text-sm text-gray-500 py-10 text-center">Nessun contenuto disponibile.</p>
         )}
       </div>
+
+      {/* Web Resources & Feedback Section (Show only if watched) */}
+      {skill.is_watched && (
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mt-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <ExternalLink className="w-5 h-5 text-purple-400" />
+            {t('det_web_resources')}
+          </h2>
+
+          {!skill.watchlist_info ? (
+            <div className="flex items-center gap-3 py-6 text-sm text-gray-500">
+              <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              <p>{t('det_feedback_loading')}</p>
+            </div>
+          ) : (() => {
+            let info = null;
+            try {
+              info = JSON.parse(skill.watchlist_info);
+            } catch (e) {
+              console.error(e);
+            }
+
+            if (!info || (!info.github_repos?.length && !info.web_results?.length)) {
+              return <p className="text-sm text-gray-500 py-4">{t('det_feedback_empty')}</p>;
+            }
+
+            return (
+              <div className="space-y-6">
+                {/* Repos GitHub */}
+                {info.github_repos && info.github_repos.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-white mb-3">{t('det_similar_repos')}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 notranslate">
+                      {info.github_repos.map((repo) => (
+                        <a
+                          key={repo.name}
+                          href={repo.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10 transition-colors flex flex-col justify-between"
+                        >
+                          <div>
+                            <span className="text-xs font-semibold text-purple-400">{repo.name}</span>
+                            <p className="text-xs text-gray-400 line-clamp-2 mt-1 leading-relaxed">{repo.description || 'Nessuna descrizione.'}</p>
+                          </div>
+                          <div className="flex gap-4 mt-3 text-[10px] text-gray-500">
+                            <span>⭐ {repo.stars} stars</span>
+                            <span>🍴 {repo.forks} forks</span>
+                            {repo.language && <span>💻 {repo.language}</span>}
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Web snippets */}
+                {info.web_results && info.web_results.length > 0 && (
+                  <div className="border-t border-white/5 pt-6">
+                    <h3 className="text-sm font-semibold text-white mb-3">{t('det_web_snippets')}</h3>
+                    <div className="space-y-4">
+                      {info.web_results.map((result, idx) => (
+                        <div key={idx} className="p-4 rounded-xl bg-white/5 border border-white/5">
+                          <a
+                            href={result.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-semibold text-cyan-400 hover:underline flex items-center gap-1.5"
+                          >
+                            {result.title}
+                            <ExternalLink className="w-3 h-3 shrink-0" />
+                          </a>
+                          <p className="text-xs text-gray-400 mt-1 leading-relaxed">{result.snippet}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {info.last_updated && (
+                  <div className="text-[10px] text-gray-500 pt-2 flex items-center gap-1">
+                    <span>{t('det_feedback_last_updated')} {new Date(info.last_updated).toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Install Modal */}
       {showInstall && (

@@ -109,5 +109,17 @@ try {
   // Column might already exist
 }
 
+try {
+  db.exec('ALTER TABLE skills ADD COLUMN is_watched INTEGER DEFAULT 0;');
+} catch (e) {
+  // Column might already exist
+}
+
+try {
+  db.exec('ALTER TABLE skills ADD COLUMN watchlist_info TEXT;');
+} catch (e) {
+  // Column might already exist
+}
+
 export default db;
 

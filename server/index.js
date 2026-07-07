@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import db from './db.js';
+import { exec } from 'child_process';
 import { syncSkills } from './sync.js';
 import { startBackgroundTranslation, translateText, translateMarkdown } from './translator.js';
 
@@ -131,6 +132,132 @@ app.get('/api/skills/:name/content', async (req, res) => {
   }
 });
 
+// Asynchronous background crawler to fetch feedback & alternative projects
+async function fetchWebFeedback(name, description) {
+  const results = {
+    github_repos: [],
+    web_results: [],
+    last_updated: new Date().toISOString()
+  };
+
+  try {
+    // 1. Cerca repository simili su GitHub
+    const githubQuery = `${name} mcp server`;
+    const ghUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(githubQuery)}&sort=stars&order=desc&per_page=5`;
+    
+    const ghResponse = await fetch(ghUrl, {
+      headers: {
+        'User-Agent': 'AI-Skill-Hub/1.0'
+      }
+    });
+
+    if (ghResponse.ok) {
+      const data = await ghResponse.json();
+      if (data.items) {
+        results.github_repos = data.items.map(repo => ({
+          name: repo.full_name,
+          url: repo.html_url,
+          description: repo.description,
+          stars: repo.stargazers_count,
+          forks: repo.forks_count,
+          language: repo.language
+        }));
+      }
+    } else {
+      console.error(`GitHub API error: ${ghResponse.status}`);
+    }
+  } catch (err) {
+    console.error('Error fetching from GitHub Search:', err);
+  }
+
+  try {
+    // 2. Cerca feedback / definizioni tramite DuckDuckGo Instant Answer API
+    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(name + ' mcp')}&format=json&no_html=1&no_redirect=1`;
+    const ddgResponse = await fetch(ddgUrl, {
+      headers: {
+        'User-Agent': 'AI-Skill-Hub/1.0'
+      }
+    });
+
+    if (ddgResponse.ok) {
+      const data = await ddgResponse.json();
+      
+      if (data.AbstractText) {
+        results.web_results.push({
+          title: data.AbstractSource || 'Wikipedia/DuckDuckGo',
+          snippet: data.AbstractText,
+          url: data.AbstractURL
+        });
+      }
+
+      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+        data.RelatedTopics.slice(0, 3).forEach(topic => {
+          if (topic.Text && topic.FirstURL) {
+            results.web_results.push({
+              title: topic.Text.split(' - ')[0] || 'Argomento correlato',
+              snippet: topic.Text,
+              url: topic.FirstURL
+            });
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching from DuckDuckGo:', err);
+  }
+
+  return results;
+}
+
+// ============ WATCHLIST API ============
+
+// Get all watchlisted skills
+app.get('/api/watchlist', (req, res) => {
+  try {
+    const skills = db.prepare('SELECT * FROM skills WHERE is_watched = 1 ORDER BY name ASC').all();
+    res.json(skills);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Watch a skill (triggers background feedback crawl)
+app.post('/api/skills/:name/watch', async (req, res) => {
+  const { name } = req.params;
+  try {
+    const skill = db.prepare('SELECT * FROM skills WHERE name = ?').get(name);
+    if (!skill) {
+      return res.status(404).json({ error: 'Skill not found' });
+    }
+
+    db.prepare('UPDATE skills SET is_watched = 1 WHERE name = ?').run(name);
+
+    // Esegui la ricerca in background
+    fetchWebFeedback(name, skill.description).then(info => {
+      db.prepare('UPDATE skills SET watchlist_info = ? WHERE name = ?').run(JSON.stringify(info), name);
+      console.log(`🔎 Web feedback saved for skill: ${name}`);
+    }).catch(err => {
+      console.error(`Error in background web feedback for ${name}:`, err);
+    });
+
+    res.json({ success: true, message: 'Skill aggiunta alla watchlist' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Unwatch a skill
+app.post('/api/skills/:name/unwatch', (req, res) => {
+  const { name } = req.params;
+  try {
+    db.prepare('UPDATE skills SET is_watched = 0 WHERE name = ?').run(name);
+    res.json({ success: true, message: 'Skill rimossa dalla watchlist' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 
 // ============ CATEGORIES API ============
 
@@ -177,6 +304,50 @@ app.post('/api/projects', (req, res) => {
 app.delete('/api/projects/:id', (req, res) => {
   db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
   res.json({ success: true });
+});
+
+// Open macOS Finder to choose folder
+app.get('/api/utils/browse-folder', (req, res) => {
+  if (process.platform !== 'darwin') {
+    return res.status(400).json({ error: 'La selezione tramite Finder nativo è supportata solo su macOS' });
+  }
+
+  const script = 'osascript -e "POSIX path of (choose folder with prompt \\"Seleziona la cartella del progetto:\\")"';
+  
+  exec(script, (err, stdout, stderr) => {
+    if (err) {
+      return res.status(400).json({ error: 'Operazione annullata' });
+    }
+    res.json({ path: stdout.trim() });
+  });
+});
+
+// Create a new folder physically and add it as project
+app.post('/api/projects/create', (req, res) => {
+  const { name, parentPath } = req.body;
+  if (!name || !parentPath) {
+    return res.status(400).json({ error: 'Nome e percorso genitore sono richiesti' });
+  }
+
+  const expandedParent = parentPath.replace(/^~/, process.env.HOME || '/home/ubuntu');
+  const projectPath = path.join(expandedParent, name);
+
+  try {
+    if (!fs.existsSync(projectPath)) {
+      fs.mkdirSync(projectPath, { recursive: true });
+    } else {
+      return res.status(409).json({ error: 'La cartella del progetto esiste già in questo percorso' });
+    }
+
+    db.prepare('INSERT INTO projects (name, path) VALUES (?, ?)').run(name, projectPath);
+    const project = db.prepare('SELECT * FROM projects WHERE path = ?').get(projectPath);
+    res.json(project);
+  } catch (error) {
+    if (error.message.includes('UNIQUE')) {
+      return res.status(409).json({ error: 'Il percorso del progetto è già presente nella lista' });
+    }
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ============ INSTALL API ============

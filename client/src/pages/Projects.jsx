@@ -8,8 +8,11 @@ export default function Projects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [mode, setMode] = useState('import'); // 'import' o 'create'
   const [newName, setNewName] = useState('');
   const [newPath, setNewPath] = useState('');
+  const [parentPath, setParentPath] = useState('');
+  const [browsing, setBrowsing] = useState(false);
   const [projectSkills, setProjectSkills] = useState({});
   const { t } = useLanguage();
 
@@ -38,22 +41,66 @@ export default function Projects() {
     fetchProjects();
   }, []);
 
+  const handleBrowse = async (target) => {
+    setBrowsing(true);
+    try {
+      const data = await api.browseFolder();
+      if (data.path) {
+        if (target === 'import') {
+          setNewPath(data.path);
+          // Estrae automaticamente il nome dell'ultima cartella
+          const parts = data.path.replace(/\/$/, '').split('/');
+          const folderName = parts[parts.length - 1] || '';
+          setNewName(folderName);
+        } else if (target === 'parent') {
+          setParentPath(data.path);
+        }
+      }
+    } catch (err) {
+      if (err.message !== 'Operazione annullata' && err.message !== 'La selezione tramite Finder nativo è supportata solo su macOS') {
+        toast.error(err.message);
+      }
+    } finally {
+      setBrowsing(false);
+    }
+  };
+
   const handleAdd = async (e) => {
     e.preventDefault();
-    if (!newName || !newPath) {
-      toast.error(t('proj_toast_error_required'));
-      return;
+    if (mode === 'import') {
+      if (!newName || !newPath) {
+        toast.error(t('proj_toast_error_required'));
+        return;
+      }
+      try {
+        await api.addProject(newName, newPath);
+        toast.success(t('proj_toast_success_added', { name: newName }));
+        resetForm();
+        fetchProjects();
+      } catch (err) {
+        toast.error(err.message);
+      }
+    } else {
+      if (!newName || !parentPath) {
+        toast.error(t('proj_toast_error_parent_required'));
+        return;
+      }
+      try {
+        await api.createProject(newName, parentPath);
+        toast.success(t('proj_toast_success_created', { name: newName }));
+        resetForm();
+        fetchProjects();
+      } catch (err) {
+        toast.error(err.message);
+      }
     }
-    try {
-      await api.addProject(newName, newPath);
-      toast.success(t('proj_toast_success_added', { name: newName }));
-      setNewName('');
-      setNewPath('');
-      setShowAdd(false);
-      fetchProjects();
-    } catch (err) {
-      toast.error(err.message);
-    }
+  };
+
+  const resetForm = () => {
+    setNewName('');
+    setNewPath('');
+    setParentPath('');
+    setShowAdd(false);
   };
 
   const handleDelete = async (project) => {
@@ -95,35 +142,112 @@ export default function Projects() {
 
       {/* Add Project Form */}
       {showAdd && (
-        <form onSubmit={handleAdd} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 mb-6">
-          <h3 className="text-sm font-semibold mb-4">{t('proj_form_title')}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <form onSubmit={handleAdd} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-6">
+          
+          {/* Tabs per Importa vs Crea */}
+          <div className="flex border-b border-white/10 mb-6">
+            <button
+              type="button"
+              onClick={() => { setMode('import'); resetForm(); setShowAdd(true); }}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-all mr-6 focus:outline-none ${
+                mode === 'import'
+                  ? 'border-purple-500 text-purple-400'
+                  : 'border-transparent text-gray-400 hover:text-white'
+              }`}
+            >
+              {t('proj_tab_import')}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('create'); resetForm(); setShowAdd(true); }}
+              className={`pb-3 text-sm font-semibold border-b-2 transition-all focus:outline-none ${
+                mode === 'create'
+                  ? 'border-purple-500 text-purple-400'
+                  : 'border-transparent text-gray-400 hover:text-white'
+              }`}
+            >
+              {t('proj_tab_create')}
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400 mb-4 leading-relaxed font-medium">
+            {mode === 'import' ? t('proj_import_desc') : t('proj_create_desc')}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+            {/* Campo Nome Progetto */}
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">{t('proj_form_name')}</label>
+              <label className="text-xs text-gray-400 mb-1.5 block font-medium">{t('proj_form_name')}</label>
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder={t('proj_form_name_placeholder')}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
+                className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200 text-sm"
               />
             </div>
-            <div>
-              <label className="text-xs text-gray-400 mb-1 block">{t('proj_form_path')}</label>
-              <input
-                type="text"
-                value={newPath}
-                onChange={(e) => setNewPath(e.target.value)}
-                placeholder={t('proj_form_path_placeholder')}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-200"
-              />
-            </div>
+
+            {/* Campo Percorso */}
+            {mode === 'import' ? (
+              <div>
+                <label className="text-xs text-gray-400 mb-1.5 block font-medium">{t('proj_form_path')}</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={newPath}
+                    placeholder={t('proj_form_path_placeholder')}
+                    className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none text-sm font-mono truncate"
+                  />
+                  <button
+                    type="button"
+                    disabled={browsing}
+                    onClick={() => handleBrowse('import')}
+                    className="px-4 py-2.5 bg-white/10 border border-white/20 text-white rounded-xl text-xs font-semibold hover:bg-white/20 active:scale-95 transition-all shrink-0 flex items-center gap-1.5 focus:outline-none"
+                  >
+                    {browsing ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <FolderOpen className="w-3.5 h-3.5" />
+                    )}
+                    {t('proj_btn_browse')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs text-gray-400 mb-1.5 block font-medium">{t('proj_form_parent_path')}</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={parentPath}
+                    placeholder="es. /Users/adrianomontresor/Desktop"
+                    className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none text-sm font-mono truncate"
+                  />
+                  <button
+                    type="button"
+                    disabled={browsing}
+                    onClick={() => handleBrowse('parent')}
+                    className="px-4 py-2.5 bg-white/10 border border-white/20 text-white rounded-xl text-xs font-semibold hover:bg-white/20 active:scale-95 transition-all shrink-0 flex items-center gap-1.5 focus:outline-none"
+                  >
+                    {browsing ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <FolderOpen className="w-3.5 h-3.5" />
+                    )}
+                    {t('proj_btn_browse_parent')}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
           <div className="flex gap-3">
-            <button type="submit" className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl text-sm">
+            <button type="submit" className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl text-sm hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg shadow-purple-500/20 active:scale-95">
               {t('proj_form_btn_add')}
             </button>
-            <button type="button" onClick={() => setShowAdd(false)} className="px-6 py-2.5 bg-white/10 border border-white/20 text-white font-semibold rounded-xl text-sm">
+            <button type="button" onClick={resetForm} className="px-6 py-2.5 bg-white/10 border border-white/20 text-white font-semibold rounded-xl text-sm hover:bg-white/20 transition-all active:scale-95">
               {t('proj_form_btn_cancel')}
             </button>
           </div>

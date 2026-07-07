@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, FolderOpen, Download, Clock, TrendingUp, Zap } from 'lucide-react';
+import { BookOpen, FolderOpen, Download, Clock, TrendingUp, Zap, Bookmark } from 'lucide-react';
 import { api } from '../utils/api';
 import { useLanguage } from '../utils/LanguageContext';
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   useEffect(() => {
-    api.getStats().then(data => {
-      setStats(data);
+    Promise.all([
+      api.getStats(),
+      api.getWatchlist()
+    ]).then(([statsData, watchlistData]) => {
+      setStats(statsData);
+      setWatchlist(watchlistData);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch((err) => {
+      console.error(err);
+      setLoading(false);
+    });
   }, []);
 
   if (loading) {
@@ -146,6 +154,50 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Watchlist Section */}
+      <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mt-6">
+        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <Bookmark className="w-5 h-5 text-purple-400" />
+          {t('db_watchlist_title')}
+        </h2>
+        {watchlist.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4">{t('db_watchlist_empty')}</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {watchlist.map((skill) => {
+              let info = null;
+              try {
+                if (skill.watchlist_info) info = JSON.parse(skill.watchlist_info);
+              } catch (e) {
+                console.error(e);
+              }
+              const bestRepo = info?.github_repos?.[0];
+
+              return (
+                <div key={skill.name} className="p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors flex flex-col justify-between">
+                  <div>
+                    <Link to={`/skill/${encodeURIComponent(skill.name)}`} className="hover:underline">
+                      <h3 className="text-sm font-semibold text-white truncate notranslate">{skill.name}</h3>
+                    </Link>
+                    <p className="text-xs text-gray-400 line-clamp-2 mt-1 mb-3 leading-relaxed">
+                      {language === 'it' && skill.description_it ? skill.description_it : skill.description}
+                    </p>
+                  </div>
+                  {bestRepo && (
+                    <div className="mt-auto pt-2 border-t border-white/5 text-[10px] text-purple-300 flex items-center gap-1.5 truncate notranslate">
+                      <span className="shrink-0 bg-purple-500/20 px-1.5 py-0.5 rounded font-medium">⭐ {bestRepo.stars}</span>
+                      <a href={bestRepo.url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate">
+                        {bestRepo.name}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Last Sync */}

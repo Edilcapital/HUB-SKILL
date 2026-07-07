@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { Search, Filter, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import { Search, Filter, X, ChevronLeft, ChevronRight, Package, Bookmark } from 'lucide-react';
 import { api } from '../utils/api';
 import { useLanguage } from '../utils/LanguageContext';
 import InstallModal from '../components/InstallModal';
@@ -9,6 +9,20 @@ export default function Catalog() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [skills, setSkills] = useState([]);
+  
+  const handleWatchToggle = async (e, skill) => {
+    e.stopPropagation();
+    try {
+      if (skill.is_watched) {
+        await api.unwatchSkill(skill.name);
+      } else {
+        await api.watchSkill(skill.name);
+      }
+      setSkills(prev => prev.map(s => s.name === skill.name ? { ...s, is_watched: s.is_watched ? 0 : 1 } : s));
+    } catch (err) {
+      console.error(err);
+    }
+  };
   const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -199,15 +213,24 @@ export default function Catalog() {
                       {skill.name}
                     </h3>
                   </Link>
-                  <span
-                    className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-semibold ml-2 shrink-0 notranslate"
-                    style={{
-                      backgroundColor: `${getCategoryColor(skill.category)}20`,
-                      color: getCategoryColor(skill.category),
-                    }}
-                  >
-                    {skill.category}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <button
+                      onClick={(e) => handleWatchToggle(e, skill)}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-purple-500/20 text-gray-400 hover:text-purple-400 transition-colors focus:outline-none"
+                      title={skill.is_watched ? t('cat_unwatch') : t('cat_watch')}
+                    >
+                      <Bookmark className={`w-3.5 h-3.5 ${skill.is_watched ? 'fill-purple-500 text-purple-500' : ''}`} />
+                    </button>
+                    <span
+                      className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-semibold notranslate"
+                      style={{
+                        backgroundColor: `${getCategoryColor(skill.category)}20`,
+                        color: getCategoryColor(skill.category),
+                      }}
+                    >
+                      {skill.category}
+                    </span>
+                  </div>
                 </div>
                 
                 {/* Descrizione espandibile */}
