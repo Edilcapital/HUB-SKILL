@@ -178,6 +178,14 @@ export default function Projects() {
             {t('proj_cloud_offline_desc')}
           </p>
 
+          <a
+            href="hubskill://avvia"
+            className="w-full mb-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 active:scale-95 text-sm"
+          >
+            <FolderOpen className="w-4 h-4" />
+            {t('proj_btn_start_local')}
+          </a>
+
           <div className="w-full text-left bg-black/30 border border-white/5 rounded-xl p-5 mb-6 text-sm">
             <h3 className="font-semibold text-purple-300 mb-3">{t('proj_cloud_offline_instructions')}</h3>
             <ul className="space-y-2.5 text-gray-400 font-medium">

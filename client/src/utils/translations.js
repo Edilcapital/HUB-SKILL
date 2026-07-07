@@ -144,7 +144,8 @@ export const translations = {
     proj_cloud_offline_step1: "1. Go to your Mac Desktop.",
     proj_cloud_offline_step2: "2. Double click the file Avvia-AI-Skill-Hub.command.",
     proj_cloud_offline_step3: "3. This page will automatically detect the launch and connect you.",
-    proj_cloud_offline_waiting: "Waiting for local server on your Mac..."
+    proj_cloud_offline_waiting: "Waiting for local server on your Mac...",
+    proj_btn_start_local: "Launch Local Server on Mac"
   },
   it: {
     // Sidebar
@@ -291,6 +292,7 @@ export const translations = {
     proj_cloud_offline_step1: "1. Vai sul Desktop del tuo Mac.",
     proj_cloud_offline_step2: "2. Fai doppio click sul file Avvia-AI-Skill-Hub.command.",
     proj_cloud_offline_step3: "3. Questa pagina rileverà l'avvio in automatico e ti connetterà all'istante.",
-    proj_cloud_offline_waiting: "In attesa del server locale sul tuo Mac..."
+    proj_cloud_offline_waiting: "In attesa del server locale sul tuo Mac...",
+    proj_btn_start_local: "Avvia Server Locale su Mac"
   }
 };
