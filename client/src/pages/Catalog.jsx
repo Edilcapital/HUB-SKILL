@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { Search, Filter, X, ChevronLeft, ChevronRight, Package } from 'lucide-react';
 import { api } from '../utils/api';
 import { useLanguage } from '../utils/LanguageContext';
 import InstallModal from '../components/InstallModal';
 
 export default function Catalog() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [skills, setSkills] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -186,7 +187,11 @@ export default function Catalog() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
           {skills.map((skill) => (
-            <div key={skill.name} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer group flex flex-col justify-between">
+            <div 
+              key={skill.name} 
+              onClick={() => navigate(`/skill/${encodeURIComponent(skill.name)}`)}
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 hover:border-white/20 transition-all duration-300 cursor-pointer group flex flex-col justify-between"
+            >
               <div>
                 <div className="flex items-start justify-between mb-3">
                   <Link to={`/skill/${encodeURIComponent(skill.name)}`} className="flex-1 min-w-0">
