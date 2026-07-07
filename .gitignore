@@ -1,0 +1,33 @@
+# Dependency directories
+node_modules/
+client/node_modules/
+server/node_modules/
+mcp-server/node_modules/
+
+# Build output
+client/dist/
+
+# SQLite temp files (but keep the main skills.db as a template seed)
+server/skills.db-wal
+server/skills.db-shm
+server/skills.db-journal
+test.db
+test.db-wal
+test.db-shm
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+ehg-contents
+_*.utxt
+*.txt~
+*.sublime-project
+*.sublime-workspace
+.vscode/
+.idea/

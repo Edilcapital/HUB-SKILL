@@ -1,0 +1,18 @@
+{
+  "name": "ai-skill-hub-mcp",
+  "version": "1.0.0",
+  "description": "MCP Server for AI Skill Hub - exposes skill search, recommend, and install tools",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "skill-hub-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "better-sqlite3": "^11.7.0",
+    "node-fetch": "^3.3.2"
+  }
+}

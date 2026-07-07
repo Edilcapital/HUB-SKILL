@@ -1,0 +1,22 @@
+{
+  "name": "ai-skill-hub",
+  "version": "1.0.0",
+  "description": "AI Skill Hub - Personal skill manager for AI coding agents",
+  "private": true,
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install && cd ../mcp-server && npm install",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "start": "cd server && node index.js",
+    "start:server": "cd server && npm start",
+    "start:client": "cd client && npm run preview",
+    "build": "npm run install:all && cd client && npm run build",
+    "sync": "cd server && node sync.js",
+    "mcp": "cd mcp-server && node index.js",
+    "setup": "npm run install:all && npm run sync"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

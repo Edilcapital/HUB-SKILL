@@ -1,0 +1,19 @@
+{
+  "name": "ai-skill-hub-server",
+  "version": "1.0.0",
+  "description": "Backend API for AI Skill Hub",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js",
+    "sync": "node sync.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2"
+  }
+}
